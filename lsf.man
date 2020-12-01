@@ -1,0 +1,24 @@
+.\" Manpage for lsf.
+.TH lsf 1 "30 November 2020" "1.0" "lsf man page"
+.SH NAME
+lsf \- ls with filter
+.SH SYNOPSIS
+.TP
+\fBlsf\fP [ -h ]
+.TP
+\fBlsf\fP [ -T | -t \fItimebefore\fP ] \fIdirname\fP
+.SH DESCRIPTION
+\fBlsf\fP filters the output of \fBls -al\fP based on the provided criteria.
+.SS Options
+.TP
+\fB-h\fP
+Display the usage help page and exit.
+.TP
+\fB-T\fP
+Filter out all files and directories that have been modified as or more recently than 6 months ago.
+.TP
+\fB-t \fItimebefore\fP
+Filter out all files and directories that have been modified as or more recently than \fItimebefore\fP days ago.
+.SH "SEE ALSO"
+ls(1)
+

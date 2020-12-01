@@ -6,6 +6,22 @@ YEARINSECONDS=31540000
 NOWSECONDS=$(echo $(date +%s))
 MINSECONDS=$(($NOWSECONDS - $YEARINSECONDS))
 
+FILTERMODE=0
+
+usage () {
+    PROGRAMNAME=$1
+    echo ""
+    echo "Usage: $PROGRAMNAME [-T | -t timebefore] dirname"
+    echo "List all files and directories in 'dirname' that meet criteria designated by the flags provided"
+    echo ""
+    echo "  -h          display this help text and quit"
+    echo "  -T          filter out any files and directories modified as or more recently than 6 months ago"
+    echo "  -t  days    filter out any files and directories modified as or more recently than 'days' days ago"
+    echo ""
+
+    exit 1
+}
+
 is_older_than_year () {
     NUMSECONDS=$1
     if [[ $NUMSECONDS -lt $MINSECONDS ]]; then
@@ -39,20 +55,36 @@ fmt_long_format_date () {
     echo "$STR"
 }
 
-# main
-shopt -s dotglob
-for file in "$DIRECTORY"/*; do
-    ISYEAROLD=$(file_mod_year_plus "$file")
-    if [[ "$ISYEAROLD" = "true"  ]]; then
-        eval $(stat -s "$file")
-        DTSTR=$(fmt_long_format_date $st_mtime)
-        MODESTR=$(stat -f '%Sp' "$file")
-        # !! OSX-specific?
-        USRNAME=$(id -un -- "$st_uid")
-        # !! OSX-specific
-        GRPNAME=$(dscacheutil -q group -a gid $st_gid | grep "name: " | awk -F': ' '{print $2}')
-        FILENAME=${file//"$DIRECTORY"\//}
-        printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$MODESTR" "$st_nlink" "$USRNAME" "$GRPNAME" "$st_size" "$DTSTR" "$FILENAME"
-    fi
+main () {
+    FILTER=$1
+    # TODO: FILTERARGS={the rest of the args, if any more}
+    shopt -s dotglob
+    for file in "$DIRECTORY"/*; do
+        ISYEAROLD=$(file_mod_year_plus "$file")
+        if [[ "$ISYEAROLD" = "true"  ]]; then
+            eval $(stat -s "$file")
+            DTSTR=$(fmt_long_format_date $st_mtime)
+            MODESTR=$(stat -f '%Sp' "$file")
+            # !! OSX-specific?
+            USRNAME=$(id -un -- "$st_uid")
+            # !! OSX-specific
+            GRPNAME=$(dscacheutil -q group -a gid $st_gid | grep "name: " | awk -F': ' '{print $2}')
+            FILENAME=${file//"$DIRECTORY"\//}
+            printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$MODESTR" "$st_nlink" "$USRNAME" "$GRPNAME" "$st_size" "$DTSTR" "$FILENAME"
+        fi
+    done
+}
+
+while getopts ":hTt:" opt; do
+    case $opt in
+        T ) FILTERMODE=1
+            ;;
+        t ) FILTERMODE=2
+            ;;
+        h | * ) usage $programname
+            ;;
+    esac
 done
+
+main $FILTERMODE
 
