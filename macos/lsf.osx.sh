@@ -37,7 +37,7 @@ usage () {
     echo "  -G          filter out any files not belonging to the current user's group"
     echo "  -g  groupnm filter based on group name"
     echo "  -b  size    filter based on comparison with 'size' number of bytes"
-    echo "  -T          filter out any files and directories modified as or more recently than 6 months ago"
+    echo "  -T          filter out any files and directories modified as or more recently than 1 year ago"
     echo "  -t  days    filter based on comparison with 'days' number of days ago [that the file was modified last]"
     echo "  -n  filenm  filter based on filename"
     echo ""
@@ -124,42 +124,28 @@ fmt_long_format_date () {
 
 satisfies_number_comparison () {
     sizeexpr=$1
-    actualsize=$2
+    actual=$2
     threshold="$(echo "$sizeexpr" | sed 's/[lgteq]*//g')"
-    if [[ "${sizeexpr:0:2}" == "eq" ]]; then
-        if [[ "$actualsize" -eq "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
-    elif [[ "${sizeexpr:0:2}" == "le" ]]; then
-        if [[ "$actualsize" -le "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
-    elif [[ "${sizeexpr:0:2}" == "lt" ]]; then
-        if [[ "$actualsize" -lt "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
-    elif [[ "${sizeexpr:0:2}" == "ge" ]]; then
-        if [[ "$actualsize" -ge "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
-    elif [[ "${sizeexpr:0:2}" == "gt" ]]; then
-        if [[ "$actualsize" -gt "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
-    else
-        echo "Invalid comparison string: $sizeexpr." 1>&2
-        exit 1
-    fi
+    case "${sizeexpr:0:2}" in
+        "eq")
+            [[ "$actual" -eq "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            ;;
+        "le")
+            [[ "$actual" -le "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            ;;
+        "lt")
+            [[ "$actual" -lt "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            ;;
+        "ge")
+            [[ "$actual" -ge "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            ;;
+        "gt")
+            [[ "$actual" -gt "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            ;;
+        *   )
+            echo "Invalid comparison string: $sizeexpr." 1>&2
+            exit 1
+    esac
 }
 
 meets_mode_criteria () {
@@ -190,7 +176,7 @@ meets_group_criteria () {
     else
         groupcriteria="$1"
     fi
-    actualgroupnm=$2
+    actualgroupnm="$2"
     
     # until exclusions and wildcards are supported:
     if [[ "$groupcriteria" == "$actualgroupnm" ]]; then
@@ -201,13 +187,34 @@ meets_group_criteria () {
 }
 
 meets_time_criteria () {
-    # TODO
-    return 1
+    timecriteria="$1"
+    actualmodtime="$2"
+    if [[ -z "$timecriteria" ]]; then
+        res="$(file_mod_year_plus "$2")"
+    else
+        # TODO
+        exit 1
+    fi
+    echo "$res"
 }
 
 meets_name_criteria () {
     # TODO: implement glob/regex filter
-    return 1
+    namecriteria="$1"
+    actualname="$2"
+    if [[ "${namecriteria:0:1}" == "!" ]]; then
+        if [[ "$actualname" != "$namecriteria" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    else
+        if [[ "$actualname" == "$namecriteria" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    fi
 }
 
 main () {
@@ -253,14 +260,26 @@ main () {
             fi
         fi
 
-        # TODO: time
+        if [[ "$filtertime" -eq 1 ]]; then
+            meetstime="$(meets_time_criteria "$timearg" "$st_mtime")"
+            if [[ "$meetstime" = "$FALSE" ]]; then
+                shouldprint=0
+                continue
+            fi
+        fi
 
-        # TODO: filename
+        filename="${file//"$directory"\//}"
+        if [[ "$filtername" -eq 1 ]]; then
+            meetsname="$(meets_name_criteria "$namearg" "$filename")"
+            if [[ "$meetstime" = "$FALSE" ]]; then
+                shouldprint=0
+                continue
+            fi
+        fi
 
         if [[ "$shouldprint" -eq 1 ]]; then
             dtstr="$(fmt_long_format_date "$st_mtime")"
             modestr="$(stat -f '%Sp' "$file")"
-            filename="${file//"$directory"\//}"
             # TODO: datestrings within 6 months should show time modified instead of year (like ls -al)
             printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$modestr" "$st_nlink" "$usrname" "$grpname" "$st_size" "$dtstr" "$filename"
         fi
