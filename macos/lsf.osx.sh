@@ -1,5 +1,7 @@
 #!/bin/bash
-DIRECTORY=$1
+
+TRUE="true"
+FALSE="false"
 
 YEARINSECONDS=31540000
 
@@ -7,6 +9,19 @@ NOWSECONDS=$(echo $(date +%s))
 MINSECONDS=$(($NOWSECONDS - $YEARINSECONDS))
 
 FILTERMODE=0
+MODEARG=""
+FILTERLINKS=0
+LINKSARG=""
+FILTERUSER=0
+USERARG=""
+FILTERGROUP=0
+GROUPARG=""
+FILTERSIZE=0
+SIZEARG=""
+FILTERTIME=0
+TIMEARG=""
+FILTERNAME=0
+NAMEARG=""
 
 usage () {
     PROGRAMNAME=$1
@@ -21,6 +36,51 @@ usage () {
 
     exit 1
 }
+
+# help ; mode x ; links x ; Username | username x ; Group | group x ; bytes x ; Time | time x ; name x
+while getopts ":hm:l:Uu:Gg:b:Tt:n:" opt; do
+    case $opt in
+        m ) FILTERMODE=1
+            MODEARG="$OPTARG"
+            ;;
+        l ) FILTERLINKS=1
+            LINKSARG="$OPTARG"
+            ;;
+        u ) FILTERUSER=1
+            USERARG="$OPTARG"
+            ;;
+        g ) FILTERGROUP=1
+            GROUPARG="$OPTARG"
+            ;;
+        b ) FILTERSIZE=1
+            SIZEARG="$OPTARG"
+            ;;
+        t ) FILTERTIME=1
+            TIMEARG="$OPTARG"
+            ;;
+        n ) FILTERNAME=1
+            NAMEARG="$OPTARG"
+            ;;
+        U ) FILTERUSER=1
+            USERARG=""
+            ;;
+        G ) FILTERGROUP=1
+            GROUPARG=""
+            ;;
+        T ) FILTERTIME=1
+            TIMEARG=""
+            ;;
+        \?) echo "Invalid option: -$OPTARG. Aborting." 1>&2
+            exit 1
+            ;;
+        : ) echo "Invalid: option -$OPTARG requires an argument. Aborting." 1>&2
+            exit 1
+            ;;
+        h | * ) usage $programname
+            exit 1
+            ;;
+    esac
+done
 
 is_older_than_year () {
     NUMSECONDS=$1
@@ -55,36 +115,115 @@ fmt_long_format_date () {
     echo "$STR"
 }
 
+meets_mode_criteria () {
+    # TODO
+    # TODO: allow string (with wildcards)
+    return 1
+}
+
+meets_links_criteria () {
+    # TODO
+    return 1
+}
+
+meets_user_criteria () {
+    # TODO
+    return 1
+}
+
+meets_group_criteria () {
+    # TODO
+    return 1
+}
+
+meets_size_criteria () {
+    SIZEEXPR=$1
+    ACTUALSIZE=$2
+    THRESHOLD="$(echo "$SIZEEXPR" | sed 's/[\m\=]//g')"
+    if [[ "${SIZEEXPR:0:1}" == "m" ]] && [[ "${SIZEEXPR:1:1}" == "=" ]]; then
+        if [[ "$ACTUALSIZE" -le "$THRESHOLD" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    elif [[ "${SIZEEXPR:0:1}" == "m" ]]; then
+        if [[ "$ACTUALSIZE" -lt "$THRESHOLD" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    elif [[ "${SIZEEXPR:1:1}" == "=" ]]; then
+        if [[ "$ACTUALSIZE" -ge "$THRESHOLD" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    else
+        if [[ "$ACTUALSIZE" -gt "$THRESHOLD" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    fi
+}
+
+meets_time_criteria () {
+    # TODO
+    return 1
+}
+
+meets_name_criteria () {
+    # TODO: implement glob/regex filter
+    return 1
+}
+
+#main () {
+#    DIRECTORY=$1
+#    FILTER=$2
+#    CRITERION=$3
+#    shopt -s dotglob
+#    for file in "$DIRECTORY"/*; do
+#        ISYEAROLD=$(file_mod_year_plus "$file")
+#        if [[ "$ISYEAROLD" = "true"  ]]; then
+#            eval $(stat -s "$file")
+#            DTSTR=$(fmt_long_format_date $st_mtime)
+#            MODESTR=$(stat -f '%Sp' "$file")
+#            # !! OSX-specific?
+#            USRNAME=$(id -un -- "$st_uid")
+#            # !! OSX-specific
+#            GRPNAME=$(dscacheutil -q group -a gid $st_gid | grep "name: " | awk -F': ' '{print $2}')
+#            FILENAME=${file//"$DIRECTORY"\//}
+#            printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$MODESTR" "$st_nlink" "$USRNAME" "$GRPNAME" "$st_size" "$DTSTR" "$FILENAME"
+#        fi
+#    done
+#}
+
 main () {
-    FILTER=$1
-    # TODO: FILTERARGS={the rest of the args, if any more}
+    directory=$1
     shopt -s dotglob
-    for file in "$DIRECTORY"/*; do
-        ISYEAROLD=$(file_mod_year_plus "$file")
-        if [[ "$ISYEAROLD" = "true"  ]]; then
-            eval $(stat -s "$file")
-            DTSTR=$(fmt_long_format_date $st_mtime)
-            MODESTR=$(stat -f '%Sp' "$file")
-            # !! OSX-specific?
-            USRNAME=$(id -un -- "$st_uid")
-            # !! OSX-specific
-            GRPNAME=$(dscacheutil -q group -a gid $st_gid | grep "name: " | awk -F': ' '{print $2}')
-            FILENAME=${file//"$DIRECTORY"\//}
+    for file in "$directory"/*; do
+        SHOULDPRINT=1
+        eval "$(stat -s "$file")"
+        if [[ "$FILTERSIZE" -eq 1 ]]; then
+            MEETSSIZE="$(meets_size_criteria "$SIZEARG" "$st_size")"
+            if [[ "$MEETSSIZE" = "$FALSE" ]]; then
+                SHOULDPRINT=0
+                continue
+            fi
+        fi
+
+        if [[ "$SHOULDPRINT" -eq 1 ]]; then
+            DTSTR="$(fmt_long_format_date "$st_mtime")"
+            MODESTR="$(stat -f '%Sp' "$file")"
+            USRNAME="$(id -un -- "$st_uid")"
+            GRPNAME="$(dscacheutil -q group -a gid "$st_gid" | grep "name: " | awk -F': ' '{print $2}')"
+            FILENAME="${file//"$directory"\//}"
             printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$MODESTR" "$st_nlink" "$USRNAME" "$GRPNAME" "$st_size" "$DTSTR" "$FILENAME"
         fi
     done
 }
 
-while getopts ":hTt:" opt; do
-    case $opt in
-        T ) FILTERMODE=1
-            ;;
-        t ) FILTERMODE=2
-            ;;
-        h | * ) usage $programname
-            ;;
-    esac
-done
+BASEDIRNAME="${@:$OPTIND:1}"
 
-main $FILTERMODE
+main "$BASEDIRNAME"
 
