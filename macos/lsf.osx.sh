@@ -149,9 +149,10 @@ satisfies_number_comparison () {
 }
 
 meets_mode_criteria () {
-    # TODO
     # TODO: allow string (with wildcards)
-    return 1
+    modecriteria="$1"
+    actualmode="$2"
+    echo "$(satisfies_number_comparison "$1" "$2")"
 }
 
 meets_user_criteria () {
@@ -219,17 +220,21 @@ meets_name_criteria () {
 
 main () {
     directory=$1
+    total=0
     shopt -s dotglob
     for file in "$directory"/*; do
-        shouldprint=1
         eval "$(stat -s "$file")"
 
-        # TODO: mode
+        if [[ "$filtermode" -eq 1 ]]; then
+            meetsmode="$(meets_mode_criteria "$modearg" "$st_mode")"
+            if [[ "$meetsmode" = "$FALSE" ]]; then
+                continue
+            fi
+        fi
 
         if [[ "$filterlinks" -eq 1 ]]; then
             meetslinks="$(satisfies_number_comparison "$linksarg" "$st_nlink")"
             if [[ "$meetslinks" = "$FALSE" ]]; then
-                shouldprint=0
                 continue
             fi
         fi
@@ -238,7 +243,6 @@ main () {
         if [[ "$filteruser" -eq 1 ]]; then
             meetsuser="$(meets_user_criteria "$userarg" "$usrname")"
             if [[ "$meetsuser" = "$FALSE" ]]; then
-                shouldprint=0
                 continue
             fi
         fi
@@ -247,7 +251,6 @@ main () {
         if [[ "$filtergroup" -eq 1 ]]; then
             meetsgroup="$(meets_group_criteria "$grouparg" "$grpname")"
             if [[ "$meetsgroup" = "$FALSE" ]]; then
-                shouldprint=0
                 continue
             fi
         fi
@@ -255,7 +258,6 @@ main () {
         if [[ "$filtersize" -eq 1 ]]; then
             meetssize="$(satisfies_number_comparison "$sizearg" "$st_size")"
             if [[ "$meetssize" = "$FALSE" ]]; then
-                shouldprint=0
                 continue
             fi
         fi
@@ -263,7 +265,6 @@ main () {
         if [[ "$filtertime" -eq 1 ]]; then
             meetstime="$(meets_time_criteria "$timearg" "$st_mtime")"
             if [[ "$meetstime" = "$FALSE" ]]; then
-                shouldprint=0
                 continue
             fi
         fi
@@ -272,18 +273,18 @@ main () {
         if [[ "$filtername" -eq 1 ]]; then
             meetsname="$(meets_name_criteria "$namearg" "$filename")"
             if [[ "$meetstime" = "$FALSE" ]]; then
-                shouldprint=0
                 continue
             fi
         fi
 
-        if [[ "$shouldprint" -eq 1 ]]; then
-            dtstr="$(fmt_long_format_date "$st_mtime")"
-            modestr="$(stat -f '%Sp' "$file")"
-            # TODO: datestrings within 6 months should show time modified instead of year (like ls -al)
-            printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$modestr" "$st_nlink" "$usrname" "$grpname" "$st_size" "$dtstr" "$filename"
-        fi
+        total="$((total+1))"
+        dtstr="$(fmt_long_format_date "$st_mtime")"
+        modestr="$(stat -f '%Sp' "$file")"
+        # TODO: datestrings within 6 months should show time modified instead of year (like ls -al)
+        printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$modestr" "$st_nlink" "$usrname" "$grpname" "$st_size" "$dtstr" "$filename"
     done
+
+    echo "total $total"
 }
 
 basedirname="${@:$OPTIND:1}"
