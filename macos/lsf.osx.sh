@@ -45,7 +45,6 @@ usage () {
     exit 1
 }
 
-# help ; mode x ; links x ; Username | username x ; Group | group x ; bytes x ; Time | time x ; name x
 while getopts ":hm:l:Uu:Gg:b:Tt:n:" opt; do
     case $opt in
         m ) filtermode=1
@@ -123,61 +122,81 @@ fmt_long_format_date () {
     echo "$STR"
 }
 
+satisfies_number_comparison () {
+    sizeexpr=$1
+    actualsize=$2
+    threshold="$(echo "$sizeexpr" | sed 's/[lgteq]*//g')"
+    if [[ "${sizeexpr:0:2}" == "eq" ]]; then
+        if [[ "$actualsize" -eq "$threshold" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    elif [[ "${sizeexpr:0:2}" == "le" ]]; then
+        if [[ "$actualsize" -le "$threshold" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    elif [[ "${sizeexpr:0:2}" == "lt" ]]; then
+        if [[ "$actualsize" -lt "$threshold" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    elif [[ "${sizeexpr:0:2}" == "ge" ]]; then
+        if [[ "$actualsize" -ge "$threshold" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    elif [[ "${sizeexpr:0:2}" == "gt" ]]; then
+        if [[ "$actualsize" -gt "$threshold" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    else
+        echo "Invalid comparison string: $sizeexpr." 1>&2
+        exit 1
+    fi
+}
+
 meets_mode_criteria () {
     # TODO
     # TODO: allow string (with wildcards)
     return 1
 }
 
-meets_links_criteria () {
-    # TODO
-    return 1
-}
-
 meets_user_criteria () {
-    # TODO
-    return 1
+    if [[ -z "$1" ]]; then
+        usercriteria="$(id -u -n)"
+    else
+        usercriteria="$1"
+    fi
+    actualusernm="$2"
+
+    # until exclusions and wildcards are supported
+    if [[ "$usercriteria" == "$actualusernm" ]]; then
+        echo "$TRUE"
+    else
+        echo "$FALSE"
+    fi
 }
 
 meets_group_criteria () {
-    # TODO
-    return 1
-}
-
-meets_size_criteria () {
-    sizeexpr=$1
-    actualsize=$2
-    threshold="$(echo "$sizeexpr" | sed 's/[\m\=]//g')"
-    if [[ "${sizeexpr:0:1}" == "=" ]] && [[ "${sizeexpr:1:1}" == "=" ]]; then
-        if [[ "$actualsize" -eq "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
-    elif [[ "${sizeexpr:0:1}" == "m" ]] && [[ "${sizeexpr:1:1}" == "=" ]]; then
-        if [[ "$actualsize" -le "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
-    elif [[ "${sizeexpr:0:1}" == "m" ]]; then
-        if [[ "$actualsize" -lt "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
-    elif [[ "${sizeexpr:1:1}" == "=" ]]; then
-        if [[ "$actualsize" -ge "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
+    if [[ -z "$1" ]]; then
+        groupcriteria="$(id -g -n)"
     else
-        if [[ "$actualsize" -gt "$threshold" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
+        groupcriteria="$1"
+    fi
+    actualgroupnm=$2
+    
+    # until exclusions and wildcards are supported:
+    if [[ "$groupcriteria" == "$actualgroupnm" ]]; then
+        echo "$TRUE"
+    else
+        echo "$FALSE"
     fi
 }
 
@@ -197,20 +216,52 @@ main () {
     for file in "$directory"/*; do
         shouldprint=1
         eval "$(stat -s "$file")"
+
+        # TODO: mode
+
+        if [[ "$filterlinks" -eq 1 ]]; then
+            meetslinks="$(satisfies_number_comparison "$linksarg" "$st_nlink")"
+            if [[ "$meetslinks" = "$FALSE" ]]; then
+                shouldprint=0
+                continue
+            fi
+        fi
+
+        usrname="$(id -un -- "$st_uid")"
+        if [[ "$filteruser" -eq 1 ]]; then
+            meetsuser="$(meets_user_criteria "$userarg" "$usrname")"
+            if [[ "$meetsuser" = "$FALSE" ]]; then
+                shouldprint=0
+                continue
+            fi
+        fi
+
+        grpname="$(dscacheutil -q group -a gid "$st_gid" | grep "name: " | awk -F': ' '{print $2}')"
+        if [[ "$filtergroup" -eq 1 ]]; then
+            meetsgroup="$(meets_group_criteria "$grouparg" "$grpname")"
+            if [[ "$meetsgroup" = "$FALSE" ]]; then
+                shouldprint=0
+                continue
+            fi
+        fi
+
         if [[ "$filtersize" -eq 1 ]]; then
-            meetssize="$(meets_size_criteria "$sizearg" "$st_size")"
+            meetssize="$(satisfies_number_comparison "$sizearg" "$st_size")"
             if [[ "$meetssize" = "$FALSE" ]]; then
                 shouldprint=0
                 continue
             fi
         fi
 
+        # TODO: time
+
+        # TODO: filename
+
         if [[ "$shouldprint" -eq 1 ]]; then
             dtstr="$(fmt_long_format_date "$st_mtime")"
             modestr="$(stat -f '%Sp' "$file")"
-            usrname="$(id -un -- "$st_uid")"
-            grpname="$(dscacheutil -q group -a gid "$st_gid" | grep "name: " | awk -F': ' '{print $2}')"
             filename="${file//"$directory"\//}"
+            # TODO: datestrings within 6 months should show time modified instead of year (like ls -al)
             printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$modestr" "$st_nlink" "$usrname" "$grpname" "$st_size" "$dtstr" "$filename"
         fi
     done
