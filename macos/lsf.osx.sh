@@ -3,35 +3,43 @@
 TRUE="true"
 FALSE="false"
 
-YEARINSECONDS=31540000
+yearinseconds=31540000
 
-NOWSECONDS=$(echo $(date +%s))
-MINSECONDS=$(($NOWSECONDS - $YEARINSECONDS))
+nowseconds=$(echo $(date +%s))
+minseconds=$(($nowseconds - $yearinseconds))
 
-FILTERMODE=0
-MODEARG=""
-FILTERLINKS=0
-LINKSARG=""
-FILTERUSER=0
-USERARG=""
-FILTERGROUP=0
-GROUPARG=""
-FILTERSIZE=0
-SIZEARG=""
-FILTERTIME=0
-TIMEARG=""
-FILTERNAME=0
-NAMEARG=""
+filtermode=0
+modearg=""
+filterlinks=0
+linksarg=""
+filteruser=0
+userarg=""
+filtergroup=0
+grouparg=""
+filtersize=0
+sizearg=""
+filtertime=0
+timearg=""
+filtername=0
+namearg=""
 
 usage () {
     PROGRAMNAME=$1
     echo ""
-    echo "Usage: $PROGRAMNAME [-T | -t timebefore] dirname"
+    echo "Usage: $PROGRAMNAME [-m mode] [-l links] [-U | -u usernm] [-G | -g groupnm] [-b size] [-T | -t days] [-n filenm] dirname"
     echo "List all files and directories in 'dirname' that meet criteria designated by the flags provided"
     echo ""
     echo "  -h          display this help text and quit"
+    echo "  -m  mode    filter based on 'mode' filemode (either numeric or textual)"
+    echo "  -l  links   filter based on comparison with 'links' number of links"
+    echo "  -U          filter out any files not belonging to the current user"
+    echo "  -u  usernm  filter based on username"
+    echo "  -G          filter out any files not belonging to the current user's group"
+    echo "  -g  groupnm filter based on group name"
+    echo "  -b  size    filter based on comparison with 'size' number of bytes"
     echo "  -T          filter out any files and directories modified as or more recently than 6 months ago"
-    echo "  -t  days    filter out any files and directories modified as or more recently than 'days' days ago"
+    echo "  -t  days    filter based on comparison with 'days' number of days ago [that the file was modified last]"
+    echo "  -n  filenm  filter based on filename"
     echo ""
 
     exit 1
@@ -40,35 +48,35 @@ usage () {
 # help ; mode x ; links x ; Username | username x ; Group | group x ; bytes x ; Time | time x ; name x
 while getopts ":hm:l:Uu:Gg:b:Tt:n:" opt; do
     case $opt in
-        m ) FILTERMODE=1
-            MODEARG="$OPTARG"
+        m ) filtermode=1
+            modearg="$OPTARG"
             ;;
-        l ) FILTERLINKS=1
-            LINKSARG="$OPTARG"
+        l ) filterlinks=1
+            linksarg="$OPTARG"
             ;;
-        u ) FILTERUSER=1
-            USERARG="$OPTARG"
+        u ) filteruser=1
+            userarg="$OPTARG"
             ;;
-        g ) FILTERGROUP=1
-            GROUPARG="$OPTARG"
+        g ) filtergroup=1
+            grouparg="$OPTARG"
             ;;
-        b ) FILTERSIZE=1
-            SIZEARG="$OPTARG"
+        b ) filtersize=1
+            sizearg="$OPTARG"
             ;;
-        t ) FILTERTIME=1
-            TIMEARG="$OPTARG"
+        t ) filtertime=1
+            timearg="$OPTARG"
             ;;
-        n ) FILTERNAME=1
-            NAMEARG="$OPTARG"
+        n ) filtername=1
+            namearg="$OPTARG"
             ;;
-        U ) FILTERUSER=1
-            USERARG=""
+        U ) filteruser=1
+            userarg=""
             ;;
-        G ) FILTERGROUP=1
-            GROUPARG=""
+        G ) filtergroup=1
+            grouparg=""
             ;;
-        T ) FILTERTIME=1
-            TIMEARG=""
+        T ) filtertime=1
+            timearg=""
             ;;
         \?) echo "Invalid option: -$OPTARG. Aborting." 1>&2
             exit 1
@@ -83,8 +91,8 @@ while getopts ":hm:l:Uu:Gg:b:Tt:n:" opt; do
 done
 
 is_older_than_year () {
-    NUMSECONDS=$1
-    if [[ $NUMSECONDS -lt $MINSECONDS ]]; then
+    numseconds=$1
+    if [[ $numseconds -lt $minseconds ]]; then
         echo "true"
     else
         echo "false"
@@ -92,26 +100,26 @@ is_older_than_year () {
 }
 
 file_mod_year_plus () {
-    FILENAME=$1
-    eval $(stat -s "$FILENAME")
+    filename=$1
+    eval $(stat -s "$filename")
     # sets st_mtime (among others)
-    RES=$(is_older_than_year "$st_mtime")
-    echo $RES
+    res=$(is_older_than_year "$st_mtime")
+    echo $res
 }
 
 fmt_long_format_date () {
     # TODO figure out how to make this work in linux, too ("-d" instead of -r")
-    DT=$(date -r "$1" +"%b %e %Y")
-    MONTH=$(cut -d' ' -f1 <<< "$DT")
-    TEMP_DAY=$(cut -d' ' -f2 <<< "$DT")
-    if [[ -z "${TEMP_DAY// }" ]]; then
-        DAY=$(cut -d' ' -f3 <<< "$DT")
-        YEAR=$(cut -d' ' -f4 <<< "$DT")
+    dt=$(date -r "$1" +"%b %e %Y")
+    month=$(cut -d' ' -f1 <<< "$dt")
+    temp_day=$(cut -d' ' -f2 <<< "$dt")
+    if [[ -z "${temp_day// }" ]]; then
+        day=$(cut -d' ' -f3 <<< "$dt")
+        year=$(cut -d' ' -f4 <<< "$dt")
     else
-        DAY=$(cut -d' ' -f2 <<< "$DT")
-        YEAR=$(cut -d' ' -f3 <<< "$DT")
+        day=$(cut -d' ' -f2 <<< "$dt")
+        year=$(cut -d' ' -f3 <<< "$dt")
     fi
-    STR=$(printf "%-3s%3d%6d\n" "$MONTH" "$DAY" "$YEAR")
+    STR=$(printf "%-3s%3d%6d\n" "$month" "$day" "$year")
     echo "$STR"
 }
 
@@ -137,29 +145,35 @@ meets_group_criteria () {
 }
 
 meets_size_criteria () {
-    SIZEEXPR=$1
-    ACTUALSIZE=$2
-    THRESHOLD="$(echo "$SIZEEXPR" | sed 's/[\m\=]//g')"
-    if [[ "${SIZEEXPR:0:1}" == "m" ]] && [[ "${SIZEEXPR:1:1}" == "=" ]]; then
-        if [[ "$ACTUALSIZE" -le "$THRESHOLD" ]]; then
+    sizeexpr=$1
+    actualsize=$2
+    threshold="$(echo "$sizeexpr" | sed 's/[\m\=]//g')"
+    if [[ "${sizeexpr:0:1}" == "=" ]] && [[ "${sizeexpr:1:1}" == "=" ]]; then
+        if [[ "$actualsize" -eq "$threshold" ]]; then
             echo "$TRUE"
         else
             echo "$FALSE"
         fi
-    elif [[ "${SIZEEXPR:0:1}" == "m" ]]; then
-        if [[ "$ACTUALSIZE" -lt "$THRESHOLD" ]]; then
+    elif [[ "${sizeexpr:0:1}" == "m" ]] && [[ "${sizeexpr:1:1}" == "=" ]]; then
+        if [[ "$actualsize" -le "$threshold" ]]; then
             echo "$TRUE"
         else
             echo "$FALSE"
         fi
-    elif [[ "${SIZEEXPR:1:1}" == "=" ]]; then
-        if [[ "$ACTUALSIZE" -ge "$THRESHOLD" ]]; then
+    elif [[ "${sizeexpr:0:1}" == "m" ]]; then
+        if [[ "$actualsize" -lt "$threshold" ]]; then
+            echo "$TRUE"
+        else
+            echo "$FALSE"
+        fi
+    elif [[ "${sizeexpr:1:1}" == "=" ]]; then
+        if [[ "$actualsize" -ge "$threshold" ]]; then
             echo "$TRUE"
         else
             echo "$FALSE"
         fi
     else
-        if [[ "$ACTUALSIZE" -gt "$THRESHOLD" ]]; then
+        if [[ "$actualsize" -gt "$threshold" ]]; then
             echo "$TRUE"
         else
             echo "$FALSE"
@@ -177,53 +191,32 @@ meets_name_criteria () {
     return 1
 }
 
-#main () {
-#    DIRECTORY=$1
-#    FILTER=$2
-#    CRITERION=$3
-#    shopt -s dotglob
-#    for file in "$DIRECTORY"/*; do
-#        ISYEAROLD=$(file_mod_year_plus "$file")
-#        if [[ "$ISYEAROLD" = "true"  ]]; then
-#            eval $(stat -s "$file")
-#            DTSTR=$(fmt_long_format_date $st_mtime)
-#            MODESTR=$(stat -f '%Sp' "$file")
-#            # !! OSX-specific?
-#            USRNAME=$(id -un -- "$st_uid")
-#            # !! OSX-specific
-#            GRPNAME=$(dscacheutil -q group -a gid $st_gid | grep "name: " | awk -F': ' '{print $2}')
-#            FILENAME=${file//"$DIRECTORY"\//}
-#            printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$MODESTR" "$st_nlink" "$USRNAME" "$GRPNAME" "$st_size" "$DTSTR" "$FILENAME"
-#        fi
-#    done
-#}
-
 main () {
     directory=$1
     shopt -s dotglob
     for file in "$directory"/*; do
-        SHOULDPRINT=1
+        shouldprint=1
         eval "$(stat -s "$file")"
-        if [[ "$FILTERSIZE" -eq 1 ]]; then
-            MEETSSIZE="$(meets_size_criteria "$SIZEARG" "$st_size")"
-            if [[ "$MEETSSIZE" = "$FALSE" ]]; then
-                SHOULDPRINT=0
+        if [[ "$filtersize" -eq 1 ]]; then
+            meetssize="$(meets_size_criteria "$sizearg" "$st_size")"
+            if [[ "$meetssize" = "$FALSE" ]]; then
+                shouldprint=0
                 continue
             fi
         fi
 
-        if [[ "$SHOULDPRINT" -eq 1 ]]; then
-            DTSTR="$(fmt_long_format_date "$st_mtime")"
-            MODESTR="$(stat -f '%Sp' "$file")"
-            USRNAME="$(id -un -- "$st_uid")"
-            GRPNAME="$(dscacheutil -q group -a gid "$st_gid" | grep "name: " | awk -F': ' '{print $2}')"
-            FILENAME="${file//"$directory"\//}"
-            printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$MODESTR" "$st_nlink" "$USRNAME" "$GRPNAME" "$st_size" "$DTSTR" "$FILENAME"
+        if [[ "$shouldprint" -eq 1 ]]; then
+            dtstr="$(fmt_long_format_date "$st_mtime")"
+            modestr="$(stat -f '%Sp' "$file")"
+            usrname="$(id -un -- "$st_uid")"
+            grpname="$(dscacheutil -q group -a gid "$st_gid" | grep "name: " | awk -F': ' '{print $2}')"
+            filename="${file//"$directory"\//}"
+            printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$modestr" "$st_nlink" "$usrname" "$grpname" "$st_size" "$dtstr" "$filename"
         fi
     done
 }
 
-BASEDIRNAME="${@:$OPTIND:1}"
+basedirname="${@:$OPTIND:1}"
 
-main "$BASEDIRNAME"
+main "$basedirname"
 
