@@ -3,10 +3,13 @@
 TRUE="true"
 FALSE="false"
 
-yearinseconds=31540000
+sixmonthsseconds=15768000
 
 nowseconds=$(echo $(date +%s))
-minseconds=$(($nowseconds - $yearinseconds))
+minseconds=$(($nowseconds - $sixmonthsseconds))
+
+isnumberpattern='^[0-9]*$'
+isnumbercompstr='^\^?(ge|gt|eq|lt|le)[0-9]*\$?$'
 
 filtermode=0
 modearg=""
@@ -89,7 +92,7 @@ while getopts ":hm:l:Uu:Gg:b:Tt:n:" opt; do
     esac
 done
 
-is_older_than_year () {
+is_older_than_sixmos () {
     numseconds=$1
     if [[ $numseconds -lt $minseconds ]]; then
         echo "true"
@@ -98,28 +101,30 @@ is_older_than_year () {
     fi
 }
 
-file_mod_year_plus () {
-    filename=$1
-    eval $(stat -s "$filename")
-    # sets st_mtime (among others)
-    res=$(is_older_than_year "$st_mtime")
-    echo $res
-}
-
 fmt_long_format_date () {
     # TODO figure out how to make this work in linux, too ("-d" instead of -r")
-    dt=$(date -r "$1" +"%b %e %Y")
+    seconds="$1"
+    showyear="$2"
+
+    dt=$(date -r "$1" +"%b %e %Y %H:%M")
     month=$(cut -d' ' -f1 <<< "$dt")
     temp_day=$(cut -d' ' -f2 <<< "$dt")
     if [[ -z "${temp_day// }" ]]; then
-        day=$(cut -d' ' -f3 <<< "$dt")
-        year=$(cut -d' ' -f4 <<< "$dt")
+        day="$(cut -d' ' -f3 <<< "$dt")"
+        year="$(cut -d' ' -f4 <<< "$dt")"
+        time="$(cut -d' ' -f5 <<< "$dt")"
     else
-        day=$(cut -d' ' -f2 <<< "$dt")
-        year=$(cut -d' ' -f3 <<< "$dt")
+        day="$(cut -d' ' -f2 <<< "$dt")"
+        year="$(cut -d' ' -f3 <<< "$dt")"
+        time="$(cut -d' ' -f4 <<< "$dt")"
     fi
-    STR=$(printf "%-3s%3d%6d\n" "$month" "$day" "$year")
-    echo "$STR"
+
+    if [[ "$showyear" -eq 1 ]]; then
+        str="$(printf "%-3s%3d%6d\n" "$month" "$day" "$year")"
+    else
+        str="$(printf "%-3s%3d%6s\n" "$month" "$day" "$time")"
+    fi
+    echo "$str"
 }
 
 satisfies_number_comparison () {
@@ -148,6 +153,27 @@ satisfies_number_comparison () {
     esac
 }
 
+satisfies_string_comparison () {
+    tocompare="$1"
+    pattern="$2"
+    [[ "$tocompare" =~ $pattern ]] && echo "$TRUE" || echo "$FALSE"
+}
+
+satisfies_simple_comparison () {
+    tocompare="$1"
+    compareagainst="$2"
+
+    if [[ "$tocompare" =~ $isnumberpattern ]]; then
+        if [[ "$compareagainst" =~ $isnumbercompstr ]]; then
+            echo "$(satisfies_number_comparison "$(echo $compareagainst | sed 's/[\^\$]*//g')" "$tocompare")"
+        else
+            echo "$FALSE"
+        fi
+    else
+        echo "$(satisfies_string_comparison "$compareagainst" "$tocompare")"
+    fi
+}
+
 meets_mode_criteria () {
     # TODO: allow string (with wildcards)
     modecriteria="$1"
@@ -161,14 +187,16 @@ meets_user_criteria () {
     else
         usercriteria="$1"
     fi
-    actualusernm="$2"
-
-    # until exclusions and wildcards are supported
-    if [[ "$usercriteria" == "$actualusernm" ]]; then
-        echo "$TRUE"
-    else
-        echo "$FALSE"
+    
+    userpattern="$usercriteria"
+    if [[ "${usercriteria:0:1}" != '^' ]]; then
+        userpattern='^'"$userpattern"
     fi
+    if [[ "${usercriteria: -1:1}" != '$' ]]; then
+        userpattern="$userpattern"'$'
+    fi
+    actualusernm="$2"
+    echo "$(satisfies_simple_comparison "$actualusernm" "$userpattern")"
 }
 
 meets_group_criteria () {
@@ -177,21 +205,23 @@ meets_group_criteria () {
     else
         groupcriteria="$1"
     fi
-    actualgroupnm="$2"
-    
-    # until exclusions and wildcards are supported:
-    if [[ "$groupcriteria" == "$actualgroupnm" ]]; then
-        echo "$TRUE"
-    else
-        echo "$FALSE"
+
+    grouppattern="$groupcriteria"
+    if [[ "${groupcriteria:0:1}" != '^' ]]; then
+        grouppattern='^'"$grouppattern"
     fi
+    if [[ "${groupcriteria: -1:1}" != '$' ]]; then
+        grouppattern="$grouppattern"'$'
+    fi
+    actualgroupnm="$2"
+    echo "$(satisfies_simple_comparison "$actualgroupnm" "$groupcriteria")"
 }
 
 meets_time_criteria () {
     timecriteria="$1"
     actualmodtime="$2"
     if [[ -z "$timecriteria" ]]; then
-        res="$(file_mod_year_plus "$2")"
+        res="$(is_older_than_sixmos "$2")"
     else
         # TODO
         exit 1
@@ -200,21 +230,12 @@ meets_time_criteria () {
 }
 
 meets_name_criteria () {
-    # TODO: implement glob/regex filter
     namecriteria="$1"
     actualname="$2"
     if [[ "${namecriteria:0:1}" == "!" ]]; then
-        if [[ "$actualname" != "$namecriteria" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
+        [[ "$actualname" != "$namecriteria" ]] && echo "$TRUE" || echo "$FALSE"
     else
-        if [[ "$actualname" == "$namecriteria" ]]; then
-            echo "$TRUE"
-        else
-            echo "$FALSE"
-        fi
+        [[ "$actualname" == "$namecriteria" ]] && echo "$TRUE" || echo "$FALSE"
     fi
 }
 
@@ -241,7 +262,12 @@ main () {
 
         usrname="$(id -un -- "$st_uid")"
         if [[ "$filteruser" -eq 1 ]]; then
-            meetsuser="$(meets_user_criteria "$userarg" "$usrname")"
+            if [[ "$userarg" =~ $isnumbercompstr ]]; then
+                meetsuser="$(meets_user_criteria "$userarg" "$st_uid")"
+            else
+                meetsuser="$(meets_user_criteria "$userarg" "$usrname")"
+            fi
+
             if [[ "$meetsuser" = "$FALSE" ]]; then
                 continue
             fi
@@ -249,7 +275,12 @@ main () {
 
         grpname="$(dscacheutil -q group -a gid "$st_gid" | grep "name: " | awk -F': ' '{print $2}')"
         if [[ "$filtergroup" -eq 1 ]]; then
-            meetsgroup="$(meets_group_criteria "$grouparg" "$grpname")"
+            if [[ "$grouparg" =~ $isnumbercompstr ]]; then
+                meetsgroup="$(meets_group_criteria "$grouparg" "$st_gid")"
+            else
+                meetsgroup="$(meets_group_criteria "$grouparg" "$grpname")"
+            fi
+
             if [[ "$meetsgroup" = "$FALSE" ]]; then
                 continue
             fi
@@ -277,10 +308,15 @@ main () {
             fi
         fi
 
-        total="$((total+1))"
-        dtstr="$(fmt_long_format_date "$st_mtime")"
+        total="$((total+$st_size))"
+
+        more_than_sixmos="$(is_older_than_sixmos "$st_mtime")"
+        if [[ "$more_than_sixmos" = "$TRUE" ]]; then
+            dtstr="$(fmt_long_format_date "$st_mtime" 1)"
+        else
+            dtstr="$(fmt_long_format_date "$st_mtime" 0)"
+        fi
         modestr="$(stat -f '%Sp' "$file")"
-        # TODO: datestrings within 6 months should show time modified instead of year (like ls -al)
         printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$modestr" "$st_nlink" "$usrname" "$grpname" "$st_size" "$dtstr" "$filename"
     done
 
