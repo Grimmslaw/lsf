@@ -11,6 +11,8 @@ minseconds=$(($nowseconds - $sixmonthsseconds))
 isnumberpattern='^[0-9]*$'
 isnumbercompstr='^\^?(ge|gt|eq|lt|le)[0-9]*\$?$'
 
+filesonly=0
+dirsonly=0
 filtermode=0
 modearg=""
 filterlinks=0
@@ -29,10 +31,12 @@ namearg=""
 usage () {
     PROGRAMNAME=$1
     echo ""
-    echo "Usage: $PROGRAMNAME [-m mode] [-l links] [-U | -u usernm] [-G | -g groupnm] [-b size] [-T | -t days] [-n filenm] dirname"
+    echo "Usage: $PROGRAMNAME [-F | -D] [-m mode] [-l links] [-U | -u usernm] [-G | -g groupnm] [-b size] [-T | -t days] [-n filenm] dirname"
     echo "List all files and directories in 'dirname' that meet criteria designated by the flags provided"
     echo ""
     echo "  -h          display this help text and quit"
+    echo "  -F          filter out all non-files"
+    echo "  -D          filter out all non-directories"
     echo "  -m  mode    filter based on 'mode' filemode (either numeric or textual)"
     echo "  -l  links   filter based on comparison with 'links' number of links"
     echo "  -U          filter out any files not belonging to the current user"
@@ -48,8 +52,12 @@ usage () {
     exit 1
 }
 
-while getopts ":hm:l:Uu:Gg:b:Tt:n:" opt; do
+while getopts ":hFDm:l:Uu:Gg:b:Tt:n:" opt; do
     case $opt in
+        F ) filesonly=1
+            ;;
+        D ) dirsonly=1
+            ;;
         m ) filtermode=1
             modearg="$OPTARG"
             ;;
@@ -101,7 +109,7 @@ is_older_than_sixmos () {
     fi
 }
 
-fmt_long_format_date () {
+format_long_fmt_dt () {
     # TODO figure out how to make this work in linux, too ("-d" instead of -r")
     seconds="$1"
     showyear="$2"
@@ -244,6 +252,14 @@ main () {
     total=0
     shopt -s dotglob
     for file in "$directory"/*; do
+        if [[ $filesonly -eq 1 ]] && [[ ! -f $file ]]; then
+            continue
+        fi
+
+        if [[ $dirsonly -eq 1 ]] && [[ ! -d $file ]]; then
+            continue
+        fi
+
         eval "$(stat -s "$file")"
 
         if [[ "$filtermode" -eq 1 ]]; then
@@ -312,9 +328,9 @@ main () {
 
         more_than_sixmos="$(is_older_than_sixmos "$st_mtime")"
         if [[ "$more_than_sixmos" = "$TRUE" ]]; then
-            dtstr="$(fmt_long_format_date "$st_mtime" 1)"
+            dtstr="$(format_long_fmt_dt "$st_mtime" 1)"
         else
-            dtstr="$(fmt_long_format_date "$st_mtime" 0)"
+            dtstr="$(format_long_fmt_dt "$st_mtime" 0)"
         fi
         modestr="$(stat -f '%Sp' "$file")"
         printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$modestr" "$st_nlink" "$usrname" "$grpname" "$st_size" "$dtstr" "$filename"
