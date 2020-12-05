@@ -1,11 +1,11 @@
 #!/bin/bash
 
-SCRIPTROOT="$(dirname "$(realpath -e "$0")")"
+scriptroot="$(dirname "$(realpath -e "$0")")"
 
 if [[ $OSTYPE == "darwin"* ]]; then
-    "$SCRIPTROOT/macos/install.sh"
+    sudo "$scriptroot/macos/install.sh"
 elif [[ $OSTYPE == "linux-gnu"* ]]; then
-    "$SCRIPTROOT/linux/install.sh"
+    sudo "$scriptroot/linux/install.sh"
 else
     echo "Unsupported operating system: $OSTYPE"
     exit 1
