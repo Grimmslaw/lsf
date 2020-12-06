@@ -17,4 +17,6 @@ jobs:
           ref: ${{ github.head_ref }}
       - name: Run Shellcheck
         uses: azohra/shell-linter@latest
+        with:
+          severity: error
 

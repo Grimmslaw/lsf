@@ -333,7 +333,7 @@ main () {
         fi
         
         filesize="${filestats[i_st_size]}"
-        total=$(( total + filesize ))"
+        total=$(( total + filesize ))
 
         more_than_sixmos="$(is_older_than_sixmos "${filestats[i_st_mtime]}")"
         if [[ "$more_than_sixmos" = "$TRUE" ]]; then
