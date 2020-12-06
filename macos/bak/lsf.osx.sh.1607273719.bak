@@ -110,15 +110,23 @@ is_older_than_sixmos () {
 }
 
 format_long_fmt_dt () {
+    # TODO figure out how to make this work in linux, too ("-d" instead of -r")
     seconds="$1"
     showyear="$2"
 
     dt=$(date -r "$1" +"%b %e %Y %H:%M")
-    mont="$(echo "$dt" | tr -s ' ' | cut -d' ' -f1)"
-    day="$(echo "$dt" | tr -s ' ' | cut -d' ' -f2)"
-    year="$(echo "$dt" | tr -s ' ' | cut -d' ' -f3)"
-    time="$(echo "$dt" | tr -s ' ' | cut -d' ' -f4)"
-    
+    month=$(cut -d' ' -f1 <<< "$dt")
+    temp_day=$(cut -d' ' -f2 <<< "$dt")
+    if [[ -z "${temp_day// }" ]]; then
+        day="$(cut -d' ' -f3 <<< "$dt")"
+        year="$(cut -d' ' -f4 <<< "$dt")"
+        time="$(cut -d' ' -f5 <<< "$dt")"
+    else
+        day="$(cut -d' ' -f2 <<< "$dt")"
+        year="$(cut -d' ' -f3 <<< "$dt")"
+        time="$(cut -d' ' -f4 <<< "$dt")"
+    fi
+
     if [[ "$showyear" -eq 1 ]]; then
         str="$(printf "%-3s%3d%6d\n" "$month" "$day" "$year")"
     else
