@@ -5,7 +5,7 @@ mv_if_exist() {
         mv "$1" "$2"
         return 0
     else
-        echo "[setup] Could not move "$1" to "$2""
+        echo "[setup] Could not move ""$1"" to ""$2"""
         return 1
     fi
 }
@@ -18,7 +18,7 @@ if [[ "$#" -lt 3 ]]; then
 fi
 
 if [[ "$1" == "0" ]]; then
-    mantarget="$(cat /private/etc/manpaths | grep local)/man1/lsf.1"
+    mantarget="$(grep local /private/etc/manpaths)/man1/lsf.1"
 else
     mantarget="$1"
 fi
