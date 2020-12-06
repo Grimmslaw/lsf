@@ -3,10 +3,11 @@
 TRUE="true"
 FALSE="false"
 
-sixmonthsseconds=15768000
+PROGRAMNAME="$(basename "$0")"
 
-nowseconds=$(echo $(date +%s))
-minseconds=$(($nowseconds - $sixmonthsseconds))
+sixmonthsseconds=15768000
+nowseconds="$(date +"%s")"
+minseconds=$((nowseconds - sixmonthsseconds))
 
 isnumberpattern='^[0-9]*$'
 isnumbercompstr='^\^?(ge|gt|eq|lt|le)[0-9]*\$?$'
@@ -44,7 +45,6 @@ i_st_mtime=8
 i_st_fname=9
 
 usage () {
-    PROGRAMNAME=$1
     echo ""
     echo "Usage: $PROGRAMNAME [-F | -D] [-m mode] [-l links] [-U | -u usernm] [-G | -g groupnm] [-b size] [-T | -t days] [-n filenm] dirname"
     echo "List all files and directories in 'dirname' that meet criteria designated by the flags provided"
@@ -109,7 +109,7 @@ while getopts ":hFDm:l:Uu:Gg:b:Tt:n:" opt; do
         : ) echo "Invalid: option -$OPTARG requires an argument. Aborting." 1>&2
             exit 1
             ;;
-        h | * ) usage $programname
+        h | * ) usage
             exit 1
             ;;
     esac
@@ -128,7 +128,7 @@ format_long_fmt_dt () {
     seconds="$1"
     showyear="$2"
 
-    dt=$(date -d "@$1" +"%b %e %Y %H:%M")
+    dt=$(date -d "@$seconds" +"%b %e %Y %H:%M")
     month="$(echo "$dt" | tr -s ' ' | cut -d' ' -f1)"
     day="$(echo "$dt" | tr -s ' ' | cut -d' ' -f2)"
     year="$(echo "$dt" | tr -s ' ' | cut -d' ' -f3)"
@@ -180,12 +180,12 @@ satisfies_simple_comparison () {
 
     if [[ "$tocompare" =~ $isnumberpattern ]]; then
         if [[ "$compareagainst" =~ $isnumbercompstr ]]; then
-            echo "$(satisfies_number_comparison "$(echo $compareagainst | sed 's/[\^\$]*//g')" "$tocompare")"
+            satisfies_number_comparison "$(echo "$compareagainst" | sed 's/[\^\$]*//g')" "$tocompare"
         else
             echo "$FALSE"
         fi
     else
-        echo "$(satisfies_string_comparison "$compareagainst" "$tocompare")"
+        satisfies_string_comparison "$compareagainst" "$tocompare"
     fi
 }
 
@@ -193,7 +193,7 @@ meets_mode_criteria () {
     # TODO: allow string (with wildcards)
     modecriteria="$1"
     actualmode="$2"
-    echo "$(satisfies_number_comparison "$1" "$2")"
+    satisfies_number_comparison "$modecriteria" "$actualmode"
 }
 
 meets_user_criteria () {
@@ -211,7 +211,7 @@ meets_user_criteria () {
         userpattern="$userpattern"'$'
     fi
     actualusernm="$2"
-    echo "$(satisfies_simple_comparison "$actualusernm" "$userpattern")"
+    satisfies_simple_comparison "$actualusernm" "$userpattern"
 }
 
 meets_group_criteria () {
@@ -229,14 +229,14 @@ meets_group_criteria () {
         grouppattern="$grouppattern"'$'
     fi
     actualgroupnm="$2"
-    echo "$(satisfies_simple_comparison "$actualgroupnm" "$groupcriteria")"
+    satisfies_simple_comparison "$actualgroupnm" "$groupcriteria"
 }
 
 meets_time_criteria () {
     timecriteria="$1"
     actualmodtime="$2"
     if [[ -z "$timecriteria" ]]; then
-        res="$(is_older_than_sixmos "$2")"
+        res="$(is_older_than_sixmos "$actualmodtime")"
     else
         # TODO
         exit 1
@@ -327,12 +327,12 @@ main () {
         filename="${filestats[i_st_fname]//"$directory"\//}"
         if [[ "$filtername" -eq 1 ]]; then
             meetsname="$(meets_name_criteria "$namearg" "$filename")"
-            if [[ "$meetstime" = "$FALSE" ]]; then
+            if [[ "$meetsname" = "$FALSE" ]]; then
                 continue
             fi
         fi
 
-        total="$((total+${filestats[i_st_size]}))"
+        total="$((total+{filestats[i_st_size]}))"
 
         more_than_sixmos="$(is_older_than_sixmos "${filestats[i_st_mtime]}")"
         if [[ "$more_than_sixmos" = "$TRUE" ]]; then
@@ -351,7 +351,7 @@ main () {
     echo "total $total"
 }
 
-basedirname="${@:$OPTIND:1}"
+basedirname="${*:$OPTIND:1}"
 
 main "$basedirname"
 

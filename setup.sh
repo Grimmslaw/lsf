@@ -7,13 +7,13 @@ scriptflag=0
 
 usage () {
     progname="$(basename "$1")"
-    if [[ ! -z "$2" ]]; then
+    if [[ -n "$2" ]]; then
         shortusage="$2"
     else
         shortusage=0
     fi
     
-    usagestring="Usage: "$progname" [-m mantarget] [-s scripttarget] mode"
+    usagestring="Usage: $progname [-m mantarget] [-s scripttarget] mode"
     if [[ "$shortusage" -eq 0 ]]; then
         echo "$usagestring"
         exit 1
@@ -30,13 +30,11 @@ usage () {
     exit 1
 }
 
-while getopts ":m:s:" opt; do
+while getopts ":hm:s:" opt; do
     case $opt in
         m ) mantarget="$OPTARG"
-            manflag=1
             ;;
         s ) scripttarget="$OPTARG"
-            scriptflag=1
             ;;
         \?) echo "[setup] Invalid option: -$OPTARG. Aborting." 1>&2
             exit 1
@@ -55,10 +53,9 @@ while getopts ":m:s:" opt; do
 done
 
 # validate positional argument
-posarg="${@:$OPTIND:1}"
+posarg="${*:$OPTIND:1}"
 if [[ -z "$posarg" ]] || [[ ! "$posarg" == "install" && ! "$posarg" == "update" ]]; then
-    echo "posarg=$posarg"
-    echo "[setup] Invalid: "$0" requires a mode (either 'install' or 'setup') as its positional argument. Aborting." 1>&2
+    echo "[setup] Invalid: ""$0"" requires a mode (either 'install' or 'setup') as its positional argument. Aborting." 1>&2
     exit 1
 fi
 

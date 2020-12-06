@@ -5,7 +5,7 @@ mv_if_exist() {
         mv "$1" "$2"
         return 0
     else
-        echo "[setup] Could not move "$1" to "$2""
+        echo "[setup] Could not move ""$1"" to ""$2"""
         return 1
     fi
 }
