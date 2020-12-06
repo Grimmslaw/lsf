@@ -1,0 +1,20 @@
+name: lsf-check
+
+on:
+  push:
+    branches:
+      - 'working'
+      - 'feature/**'
+      - '!master'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Run Shellcheck
+        uses: azohra/shell-linter@latest
+
