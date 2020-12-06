@@ -1,5 +1,15 @@
 #!/bin/bash
 
+mv_if_exist() {
+    if [[ -f "$1" && -f "$2" ]] || [[ -d "$1" && -d "$2" ]]; then
+        mv "$1" "$2"
+        return 0
+    else
+        echo "[setup] Could not move "$1" to "$2""
+        return 1
+    fi
+}
+
 projectroot="$(dirname "$(dirname "$(realpath -e "$0")")")"
 # this shouldn't happen as long as this is called by ../setup.sh
 if [[ "$#" -lt 3 ]]; then
@@ -9,21 +19,19 @@ fi
 
 if [[ "$1" == "0" ]]; then
     mantarget="$(cat /private/etc/manpaths | grep local)/man1/lsf.1"
-elif [[ ! -d "$(dirname "$1")" ]]; then
-    mkdir -p "$(dirname "$1")"
-    mantarget="$1"
 else
     mantarget="$1"
 fi
 
 if [[ "$2" == "0" ]]; then
     scripttarget="/usr/local/bin/lsf"
-elif [[ ! -d "$(dirname "$2")" ]]; then
-    mkdir -p "$(dirname "$2")"
-    scripttarget="$2"
 else
     scripttarget="$2"
 fi
+
+# with '-p', creates (including intermediates) if dir does not exist and does nothing if it does
+mkdir -p "$(dirname "$mantarget")"
+mkdir -p "$(dirname "$scripttarget")"
 
 if [[ "$3" == "update" ]]; then
     tmstmp="$(date +"%s")"
