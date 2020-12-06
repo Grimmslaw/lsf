@@ -7,7 +7,7 @@ PROGRAMNAME="$(basename "$0")"
 
 sixmonthsseconds=15768000
 nowseconds="$(date +"%s")"
-minseconds=$((nowseconds - sixmonthsseconds))
+minseconds=$(( nowseconds - sixmonthsseconds ))
 
 isnumberpattern='^[0-9]*$'
 isnumbercompstr='^\^?(ge|gt|eq|lt|le)[0-9]*\$?$'
@@ -331,8 +331,9 @@ main () {
                 continue
             fi
         fi
-
-        total="$((total+{filestats[i_st_size]}))"
+        
+        filesize="${filestats[i_st_size]}"
+        total=$(( total + filesize ))"
 
         more_than_sixmos="$(is_older_than_sixmos "${filestats[i_st_mtime]}")"
         if [[ "$more_than_sixmos" = "$TRUE" ]]; then

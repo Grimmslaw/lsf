@@ -1,19 +1,18 @@
 #!/bin/bash
 
+PROGRAMNAME="$(basename "$0")"
+
 mantarget=""
-manflag=0
 scripttarget=""
-scriptflag=0
 
 usage () {
-    progname="$(basename "$1")"
-    if [[ -n "$2" ]]; then
-        shortusage="$2"
+    if [[ -n "$1" ]]; then
+        shortusage="$1"
     else
         shortusage=0
     fi
     
-    usagestring="Usage: $progname [-m mantarget] [-s scripttarget] mode"
+    usagestring="Usage: $PROGRAMNAME [-m mantarget] [-s scripttarget] mode"
     if [[ "$shortusage" -eq 0 ]]; then
         echo "$usagestring"
         exit 1
@@ -42,11 +41,11 @@ while getopts ":hm:s:" opt; do
         : ) echo "[setup] Invalid: option -$OPTARG requires an argument. Aborting." 1>&2
             exit 1
             ;;
-        h ) usage "$programname" 0
+        h ) usage 0
             exit 1
             ;;
         * ) echo "[setup] Invalid: unknown option. Aborting."
-            usage "$programname" 1
+            usage 1
             exit 1
             ;;
     esac

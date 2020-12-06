@@ -6,7 +6,7 @@ FALSE="false"
 PROGRAMNAME="$(basename "$0")"
 
 sixmonthsseconds=15768000
-nowseconds=$(echo "$(date +%s)")
+nowseconds="$(date +"%s")"
 minseconds=$((nowseconds - sixmonthsseconds))
 
 isnumberpattern='^[0-9]*$'
@@ -165,12 +165,12 @@ satisfies_simple_comparison () {
 
     if [[ "$tocompare" =~ $isnumberpattern ]]; then
         if [[ "$compareagainst" =~ $isnumbercompstr ]]; then
-            "$(satisfies_number_comparison "$(echo "$compareagainst" | sed 's/[\^\$]*//g')" "$tocompare")"
+            satisfies_number_comparison "$(echo "$compareagainst" | sed 's/[\^\$]*//g')" "$tocompare"
         else
             echo "$FALSE"
         fi
     else
-        "$(satisfies_string_comparison "$compareagainst" "$tocompare")"
+        satisfies_string_comparison "$compareagainst" "$tocompare"
     fi
 }
 
@@ -178,7 +178,7 @@ meets_mode_criteria () {
     # TODO: allow string (with wildcards)
     modecriteria="$1"
     actualmode="$2"
-    "$(satisfies_number_comparison "$modecriteria" "$actualmode")"
+    satisfies_number_comparison "$modecriteria" "$actualmode"
 }
 
 meets_user_criteria () {
@@ -196,7 +196,7 @@ meets_user_criteria () {
         userpattern="$userpattern"'$'
     fi
     actualusernm="$2"
-    "$(satisfies_simple_comparison "$actualusernm" "$userpattern")"
+    satisfies_simple_comparison "$actualusernm" "$userpattern"
 }
 
 meets_group_criteria () {
@@ -214,7 +214,7 @@ meets_group_criteria () {
         grouppattern="$grouppattern"'$'
     fi
     actualgroupnm="$2"
-    "$(satisfies_simple_comparison "$actualgroupnm" "$groupcriteria")"
+    satisfies_simple_comparison "$actualgroupnm" "$groupcriteria"
 }
 
 meets_time_criteria () {
