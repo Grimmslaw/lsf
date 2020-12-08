@@ -4,6 +4,10 @@ TRUE="true"
 FALSE="false"
 
 PROGRAMNAME="$(basename "$0")"
+loglevel="$error"
+
+# pulls in log() and log levels
+. "$(dirname "$(dirname "$0")")/common.sh"
 
 sixmonthsseconds=15768000
 nowseconds="$(date +"%s")"
@@ -31,28 +35,29 @@ namearg=""
 
 usage () {
     echo ""
-    echo "Usage: $PROGRAMNAME [-F | -D] [-m mode] [-l links] [-U | -u usernm] [-G | -g groupnm] [-b size] [-T | -t days] [-n filenm] dirname"
+    echo "Usage: $PROGRAMNAME [-F | -D] [-m mode] [-l links] [-U | -u usernm] [-G | -g groupnm] [-b size] [-T | -t days] [-n filenm] [-v loglevel] dirname"
     echo "List all files and directories in 'dirname' that meet criteria designated by the flags provided"
     echo ""
-    echo "  -h          display this help text and quit"
-    echo "  -F          filter out all non-files"
-    echo "  -D          filter out all non-directories"
-    echo "  -m  mode    filter based on 'mode' filemode (either numeric or textual)"
-    echo "  -l  links   filter based on comparison with 'links' number of links"
-    echo "  -U          filter out any files not belonging to the current user"
-    echo "  -u  usernm  filter based on username"
-    echo "  -G          filter out any files not belonging to the current user's group"
-    echo "  -g  groupnm filter based on group name"
-    echo "  -b  size    filter based on comparison with 'size' number of bytes"
-    echo "  -T          filter out any files and directories modified as or more recently than 1 year ago"
-    echo "  -t  days    filter based on comparison with 'days' number of days ago [that the file was modified last]"
-    echo "  -n  filenm  filter based on filename"
+    echo "  -h              display this help text and quit"
+    echo "  -F              filter out all non-files"
+    echo "  -D              filter out all non-directories"
+    echo "  -m  mode        filter based on 'mode' filemode (either numeric or textual)"
+    echo "  -l  links       filter based on comparison with 'links' number of links"
+    echo "  -U              filter out any files not belonging to the current user"
+    echo "  -u  usernm      filter based on username"
+    echo "  -G              filter out any files not belonging to the current user's group"
+    echo "  -g  groupnm     filter based on group name"
+    echo "  -b  size        filter based on comparison with 'size' number of bytes"
+    echo "  -T              filter out any files and directories modified as or more recently than 1 year ago"
+    echo "  -t  days        filter based on comparison with 'days' number of days ago [that the file was modified last]"
+    echo "  -n  filenm      filter based on filename"
+    echo "  -v  loglevel    the lowest level of log statement that should be logged [0 (nolog), 1 (error), 2 (warn), 3 (info), 4 (trace)]"
     echo ""
 
     exit 1
 }
 
-while getopts ":hFDm:l:Uu:Gg:b:Tt:n:" opt; do
+while getopts ":hFDm:l:Uu:Gg:b:Tt:n:v:" opt; do
     case $opt in
         F ) filesonly=1
             ;;
@@ -87,6 +92,8 @@ while getopts ":hFDm:l:Uu:Gg:b:Tt:n:" opt; do
             ;;
         T ) filtertime=1
             timearg=""
+            ;;
+        v ) loglevel="$OPTARG"
             ;;
         \?) echo "Invalid option: -$OPTARG. Aborting." 1>&2
             exit 1
@@ -148,7 +155,8 @@ satisfies_number_comparison () {
             [[ "$actual" -gt "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
             ;;
         *   )
-            echo "Invalid comparison string: $sizeexpr." 1>&2
+            # echo "Invalid comparison string: $sizeexpr." 1>&2
+            log "$error" "lsf" "Invalid comparison string: "$sizeexpr."" "$loglevel"
             exit 1
     esac
 }

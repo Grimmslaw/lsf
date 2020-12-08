@@ -5,6 +5,8 @@ FALSE="false"
 
 PROGRAMNAME="$(basename "$0")"
 
+. "$(dirname "$(dirname "$0")")/common.sh"
+
 sixmonthsseconds=15768000
 nowseconds="$(date +"%s")"
 minseconds=$(( nowseconds - sixmonthsseconds ))
@@ -163,7 +165,7 @@ satisfies_number_comparison () {
             [[ "$actual" -gt "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
             ;;
         *   )
-            echo "Invalid comparison string: $sizeexpr." 1>&2
+            log "$error" "lsf" "Invalid comparison string: ""$sizeexpr"""
             exit 1
     esac
 }
@@ -268,7 +270,6 @@ main () {
             continue
         fi
 
-        #eval "$(stat -s "$file")"
         read -r -a filestats <<< "$(stat --format="$stfmt" "$file")"
 
         # TODO: check about conditionally giving omode/smode
