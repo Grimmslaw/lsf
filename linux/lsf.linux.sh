@@ -10,7 +10,7 @@ nowseconds="$(date +"%s")"
 minseconds=$(( nowseconds - sixmonthsseconds ))
 
 isnumberpattern='^[0-9]*$'
-iscomparisonstr="((<=?)|(=)|(<=?))[0-9]*"
+iscomparisonstr="((<=?)|(!?=)|(<=?))[0-9]*"
 
 filesonly=0
 dirsonly=0
@@ -148,6 +148,10 @@ satisfies_number_comparison () {
     threshold="$(echo "$sizeexpr" | sed 's/[lgteq]*//g')"
     
     case "${sizeexpr:0:1}" in
+        "!" )
+            # regex ensures that second character is "="
+            [[ "$actual" -ne "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            ;;
         "=" )
             [[ "$actual" -eq "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
             ;;

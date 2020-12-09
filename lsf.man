@@ -49,6 +49,18 @@ Filter out all files and directories that have been modified as or more recently
 .TP
 \fB-n \fIfilename\fP
 Only display files matching the pattern, \fIfilename\fP, which can be either an exact string or a regex.
+.SS Comparison Strings
+For the purposes of this utility, a comparison string is essentially the right half of an inequality (where the attribute in question of each file is assumed to be the left half), defining the threshold for filtering files. Valid values are "!=", "=", "<", "<=", ">", and ">=", followed (without spaces) by the number to be compared to and enclosed in quotes.
+.P
+For example, if you wanted to limit results to files/directories in your home directory that have fewer than 15 links, you would run the utility as
+.P
+.IP
+\fBlsf -l "<15" ~\fP.
+.P
+Or to display only files/directories in your home directory belonging to a user with uid 501, you would run the utility as
+.P
+.IP
+\fBlsf -u "=501" ~\fP.
 .SH "SEE ALSO"
 ls(1)
 

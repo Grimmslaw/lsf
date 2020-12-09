@@ -10,7 +10,7 @@ nowseconds="$(date +"%s")"
 minseconds=$((nowseconds - sixmonthsseconds))
 
 isnumberpattern='^[0-9]*$'
-iscomparisonstr="((<=?)|(=)|(<=?))[0-9]*"
+iscomparisonstr="((<=?)|(!?=)|(<=?))[0-9]*"
 
 filesonly=0
 dirsonly=0
@@ -130,9 +130,13 @@ format_long_fmt_dt () {
 satisfies_number_comparison () {
     sizeexpr=$1
     actual=$2
-    threshold="$(echo "$sizeexpr" | sed 's/[\<\>\=]*//g')"
+    threshold="$(echo "$sizeexpr" | sed 's/[\!\<\>\=]*//g')"
 
     case "${sizeexpr:0:1}" in
+        "!" )
+            # regex assures that '=' is the second character
+            [[ "$actual" -ne "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            ;;
         "=" )
             [[ "$actual" -eq "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
             ;;
