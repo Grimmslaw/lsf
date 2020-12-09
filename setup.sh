@@ -41,11 +41,11 @@ while getopts ":hm:s:" opt; do
         : ) echo "[setup] Invalid: option -$OPTARG requires an argument. Aborting." 1>&2
             exit 1
             ;;
-        h ) usage 0
+        h ) usage 1
             exit 1
             ;;
         * ) echo "[setup] Invalid: unknown option. Aborting."
-            usage 1
+            usage 0
             exit 1
             ;;
     esac
@@ -54,7 +54,7 @@ done
 # validate positional argument
 posarg="${*:$OPTIND:1}"
 if [[ -z "$posarg" ]] || [[ ! "$posarg" == "install" && ! "$posarg" == "update" ]]; then
-    echo "[setup] Invalid: ""$0"" requires a mode (either 'install' or 'setup') as its positional argument. Aborting." 1>&2
+    echo "[setup] Invalid: ""$0"" requires a mode (either 'install' or 'update') as its positional argument. Aborting." 1>&2
     exit 1
 fi
 
