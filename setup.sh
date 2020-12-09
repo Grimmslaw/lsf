@@ -11,7 +11,7 @@ usage () {
     else
         shortusage=0
     fi
-    
+
     usagestring="Usage: $PROGRAMNAME [-m mantarget] [-s scripttarget] mode"
     if [[ "$shortusage" -eq 0 ]]; then
         echo "$usagestring"
