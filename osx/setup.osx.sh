@@ -1,7 +1,7 @@
 #!/bin/bash
 
 mv_if_exist() {
-    if [[ -f "$1" && -f "$2" ]] || [[ -d "$1" && -d "$2" ]]; then
+    if [[ -f "$1" ]] || [[ -d "$1" ]]; then
         mv "$1" "$2"
         return 0
     else
