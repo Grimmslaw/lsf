@@ -24,22 +24,22 @@ Only display directories.
 Only display results that match the octal permissions, \fImode\fP.
 .TP
 \fB-l \fIlinks\fP
-Only display results that match the comparison string (see below), \fIlinks\fP, for the number of links to each.
+Only display results that match the comparison string (e.g. ">=8" or "<90"), \fIlinks\fP, for the number of links to each.
 .TP
 \fB-U\fP
 Only display results belonging to the current user.
 .TP
 \fB-u \fIusername\fP
-Only display results belonging to a user matching the pattern, \fIusername\fP. The value of \fIusername\fP can be a normal string or regex, or it can be a comparison string (see below), representing the range of uid's that can be displayed (e.g. "gt20" or "eq100").
+Only display results belonging to a user matching the pattern, \fIusername\fP. The value of \fIusername\fP can be a normal string or regex, or it can be a comparison string representing the range of uid's that can be displayed (e.g. ">=20" or "=100").
 .TP
 \fB-G\fP
 Only display results belonging to the current user's group.
 .TP
 \fb-g \fIgroupname\fP
-Only display results belonging to a user of a group matching the pattern, \fIgroupname\fP. The value of \fIgroupname\fP can be a normal string or regex, or it can be a comparison string (see below), representing the range of gid's that can be displayed (e.g. "eq100" or "le40").
+Only display results belonging to a user of a group matching the pattern, \fIgroupname\fP. The value of \fIgroupname\fP can be a normal string or regex, or it can be a comparison string, representing the range of gid's that can be displayed (e.g. "=100" or "<40").
 .TP
 \fB-b \fIsize\fP
-Only display results that match the comparison string (see below), \fIsize\fP, for the size (in bytes) of each.
+Only display results that match the comparison string, \fIsize\fP, for the size (in bytes) of each.
 .TP
 \fB-T\fP
 Filter out all files and directories that have been modified as or more recently than 6 months ago.
@@ -49,28 +49,6 @@ Filter out all files and directories that have been modified as or more recently
 .TP
 \fB-n \fIfilename\fP
 Only display files matching the pattern, \fIfilename\fP, which can be either an exact string or a regex.
-.SS Comparison Strings
-For the purposes of this utility, a comparison string is a textual representation of an inequality that does not use special characters. A number is preceded by two characters that match the comparisons used in bash and similar shells, so:
-.TP
-\fBgt\fP - ">", greater than
-.TP
-\fBge\fP - ">=", greater than or equal to
-.TP
-\fBeq\fP - "=", equal to
-.TP
-\fBle\fP - "<=", less than or equal to
-.TP
-\fBlt\fP - "<", less than
-.P
-Thus, if you wanted to limit results to files in your home directory that have fewer than 15 links, you would run the utility as
-.P
-.IP
-\fBlsf -l lt15 ~\fP.
-.P
-Or to display only files/directories in your home directory belonging to a user with uid 501, you would run the utility as
-.P
-.IP
-\fBlsf -u eq501 ~\fP.
 .SH "SEE ALSO"
 ls(1)
 
