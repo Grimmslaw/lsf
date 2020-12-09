@@ -69,7 +69,7 @@ fi
 projectroot="$(dirname "$(realpath -e "$0")")"
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    sudo "$projectroot/macos/setup.osx.sh" "$mantarget" "$scripttarget" "$posarg"
+    sudo "$projectroot/osx/setup.osx.sh" "$mantarget" "$scripttarget" "$posarg"
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     sudo "$projectroot/linux/setup.linux.sh" "$mantarget" "$scripttarget" "$posarg"
 else
