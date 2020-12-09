@@ -11,7 +11,7 @@ usage () {
     else
         shortusage=0
     fi
-    
+
     usagestring="Usage: $PROGRAMNAME [-m mantarget] [-s scripttarget] mode"
     if [[ "$shortusage" -eq 0 ]]; then
         echo "$usagestring"
@@ -41,11 +41,11 @@ while getopts ":hm:s:" opt; do
         : ) echo "[setup] Invalid: option -$OPTARG requires an argument. Aborting." 1>&2
             exit 1
             ;;
-        h ) usage 0
+        h ) usage 1
             exit 1
             ;;
         * ) echo "[setup] Invalid: unknown option. Aborting."
-            usage 1
+            usage 0
             exit 1
             ;;
     esac
@@ -54,7 +54,7 @@ done
 # validate positional argument
 posarg="${*:$OPTIND:1}"
 if [[ -z "$posarg" ]] || [[ ! "$posarg" == "install" && ! "$posarg" == "update" ]]; then
-    echo "[setup] Invalid: ""$0"" requires a mode (either 'install' or 'setup') as its positional argument. Aborting." 1>&2
+    echo "[setup] Invalid: ""$0"" requires a mode (either 'install' or 'update') as its positional argument. Aborting." 1>&2
     exit 1
 fi
 
@@ -69,7 +69,7 @@ fi
 projectroot="$(dirname "$(realpath -e "$0")")"
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    sudo "$projectroot/macos/setup.osx.sh" "$mantarget" "$scripttarget" "$posarg"
+    sudo "$projectroot/osx/setup.osx.sh" "$mantarget" "$scripttarget" "$posarg"
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     sudo "$projectroot/linux/setup.linux.sh" "$mantarget" "$scripttarget" "$posarg"
 else

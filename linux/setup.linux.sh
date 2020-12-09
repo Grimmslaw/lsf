@@ -37,7 +37,7 @@ if [[ "$3" == "update" ]]; then
     tmstmp="$(date +"%s")"
     backup="$projectroot/linux/bak"
     mv_if_exist "$scripttarget" "$backup/lsf.linux.sh.$tmstmp.bak"
-    mv_if_exist "$mantarget" "$backup/lsf.man.$tmstmp.bak"
+    mv_if_exist "$mantarget" "$backup/lsf.linux.man.$tmstmp.bak"
 fi
 
 # should happen whether "update" or "install"
