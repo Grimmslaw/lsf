@@ -10,7 +10,7 @@ nowseconds="$(date +"%s")"
 minseconds=$((nowseconds - sixmonthsseconds))
 
 isnumberpattern='^[0-9]*$'
-isnumbercompstr='^\^?(ge|gt|eq|lt|le)[0-9]*\$?$'
+iscomparisonstr="((<=?)|(!?=)|(<=?))[0-9]*"
 
 filesonly=0
 dirsonly=0
@@ -130,22 +130,29 @@ format_long_fmt_dt () {
 satisfies_number_comparison () {
     sizeexpr=$1
     actual=$2
-    threshold="$(echo "$sizeexpr" | sed 's/[lgteq]*//g')"
-    case "${sizeexpr:0:2}" in
-        "eq")
+    threshold="$(echo "$sizeexpr" | sed 's/[\!\<\>\=]*//g')"
+
+    case "${sizeexpr:0:1}" in
+        "!" )
+            # regex assures that '=' is the second character
+            [[ "$actual" -ne "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            ;;
+        "=" )
             [[ "$actual" -eq "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
             ;;
-        "le")
-            [[ "$actual" -le "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+        "<" )
+            if [[ "${sizeexpr:1:1}" == "=" ]]; then
+                [[ "$actual" -le "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            else
+                [[ "$actual" -lt "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            fi
             ;;
-        "lt")
-            [[ "$actual" -lt "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
-            ;;
-        "ge")
-            [[ "$actual" -ge "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
-            ;;
-        "gt")
-            [[ "$actual" -gt "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+        ">" )
+            if [[ "${sizeexpr:1:1}" == "=" ]]; then
+                [[ "$actual" -ge "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            else
+                [[ "$actual" -gt "$threshold" ]] && echo "$TRUE" || echo "$FALSE"
+            fi
             ;;
         *   )
             echo "Invalid comparison string: $sizeexpr." 1>&2
@@ -164,7 +171,7 @@ satisfies_simple_comparison () {
     compareagainst="$2"
 
     if [[ "$tocompare" =~ $isnumberpattern ]]; then
-        if [[ "$compareagainst" =~ $isnumbercompstr ]]; then
+        if [[ "$compareagainst" =~ $iscomparisonstr ]]; then
             satisfies_number_comparison "$(echo "$compareagainst" | sed 's/[\^\$]*//g')" "$tocompare"
         else
             echo "$FALSE"
@@ -270,7 +277,7 @@ main () {
 
         usrname="$(id -un -- "$st_uid")"
         if [[ "$filteruser" -eq 1 ]]; then
-            if [[ "$userarg" =~ $isnumbercompstr ]]; then
+            if [[ "$userarg" =~ $iscomparisonstr ]]; then
                 meetsuser="$(meets_user_criteria "$userarg" "$st_uid")"
             else
                 meetsuser="$(meets_user_criteria "$userarg" "$usrname")"
@@ -283,7 +290,7 @@ main () {
 
         grpname="$(dscacheutil -q group -a gid "$st_gid" | grep "name: " | awk -F': ' '{print $2}')"
         if [[ "$filtergroup" -eq 1 ]]; then
-            if [[ "$grouparg" =~ $isnumbercompstr ]]; then
+            if [[ "$grouparg" =~ $iscomparisonstr ]]; then
                 meetsgroup="$(meets_group_criteria "$grouparg" "$st_gid")"
             else
                 meetsgroup="$(meets_group_criteria "$grouparg" "$grpname")"
