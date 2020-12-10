@@ -251,7 +251,6 @@ main () {
             continue
         fi
 
-        read -r filestats <<< "$(stat -f "$stfmt" "$file")"
         filestats="$(stat -f "$stfmt" "$file")"
         IFS=" " read st_omode st_smode st_nlinks st_uid st_uname st_gid st_gname st_size st_mtime st_fname <<< "$filestats"
 
