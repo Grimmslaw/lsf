@@ -204,11 +204,7 @@ meets_mode_criteria () {
 }
 
 meets_user_criteria () {
-    if [[ -z "$1" ]]; then
-        usercriteria="$(id -u -n)"
-    else
-        usercriteria="$1"
-    fi
+    [[ -z "$1" ]] && usercriteria="$(id -u -n)" || usercriteria="$1"
     
     userpattern="$usercriteria"
     if [[ "${usercriteria:0:1}" != '^' ]]; then
@@ -222,11 +218,7 @@ meets_user_criteria () {
 }
 
 meets_group_criteria () {
-    if [[ -z "$1" ]]; then
-        groupcriteria="$(id -g -n)"
-    else
-        groupcriteria="$1"
-    fi
+    [[ -z "$1" ]] && groupcriteria="$(id -g -n)" || groupcriteria="$1"
 
     grouppattern="$groupcriteria"
     if [[ "${groupcriteria:0:1}" != '^' ]]; then
@@ -275,7 +267,6 @@ main () {
             continue
         fi
 
-        #eval "$(stat -s "$file")"
         read -r -a filestats <<< "$(stat --format="$stfmt" "$file")"
 
         # TODO: check about conditionally giving omode/smode
