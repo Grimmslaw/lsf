@@ -38,9 +38,11 @@ If you would like to contribute:
 
 # Use
 The basic usage is as follows:
+
 `lsf [ -F | -D ] [ -m mode ] [ -l links ] [ -U | -u user ] [ -G | -g group ] [ -b size ] [ -T | -t days ] [ -n filename ] dirname`
 * `dirname`
     * the base directory to search (with a depth of 1)
+    
 ### Options
 * `[ -F, -D ]`
     * display only files or directories, respectively
