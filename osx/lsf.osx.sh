@@ -29,6 +29,9 @@ timearg=""
 filtername=0
 namearg=""
 
+# format for stat -- according to osx bash specifications
+stfmt="%p %Sp %l %u %Su %g %Sg %z %m %N"
+
 usage () {
     echo ""
     echo "Usage: $PROGRAMNAME [-F | -D] [-m mode] [-l links] [-U | -u usernm] [-G | -g groupnm] [-b size] [-T | -t days] [-n filenm] dirname"
@@ -102,11 +105,7 @@ done
 
 is_older_than_sixmos () {
     numseconds=$1
-    if [[ $numseconds -lt $minseconds ]]; then
-        echo "true"
-    else
-        echo "false"
-    fi
+    [[ "$numseconds" -lt "$minseconds" ]] && echo "$TRUE" || echo "$FALSE"
 }
 
 format_long_fmt_dt () {
@@ -189,11 +188,7 @@ meets_mode_criteria () {
 }
 
 meets_user_criteria () {
-    if [[ -z "$1" ]]; then
-        usercriteria="$(id -u -n)"
-    else
-        usercriteria="$1"
-    fi
+    [[ -z "$1" ]] && usercriteria="$(id -u -n)" || usercriteria="$1"
     
     userpattern="$usercriteria"
     if [[ "${usercriteria:0:1}" != '^' ]]; then
@@ -207,11 +202,7 @@ meets_user_criteria () {
 }
 
 meets_group_criteria () {
-    if [[ -z "$1" ]]; then
-        groupcriteria="$(id -g -n)"
-    else
-        groupcriteria="$1"
-    fi
+    [[ -z "$1" ]] && groupcriteria="$(id -g -n)" || groupcriteria="$1"
 
     grouppattern="$groupcriteria"
     if [[ "${groupcriteria:0:1}" != '^' ]]; then
@@ -249,6 +240,7 @@ meets_name_criteria () {
 main () {
     directory=$1
     total=0
+
     shopt -s dotglob
     for file in "$directory"/*; do
         if [[ $filesonly -eq 1 ]] && [[ ! -f $file ]]; then
@@ -259,28 +251,30 @@ main () {
             continue
         fi
 
-        eval "$(stat -s "$file")"
+        read -r filestats <<< "$(stat -f "$stfmt" "$file")"
+        filestats="$(stat -f "$stfmt" "$file")"
+        IFS=" " read st_omode st_smode st_nlinks st_uid st_uname st_gid st_gname st_size st_mtime st_fname <<< "$filestats"
 
+        # TODO: check about conditionally giving omode/smode
         if [[ "$filtermode" -eq 1 ]]; then
-            meetsmode="$(meets_mode_criteria "$modearg" "$st_mode")"
+            meetsmode="$(meets_mode_criteria "$modearg" "$st_omode")"
             if [[ "$meetsmode" = "$FALSE" ]]; then
                 continue
             fi
         fi
 
         if [[ "$filterlinks" -eq 1 ]]; then
-            meetslinks="$(satisfies_number_comparison "$linksarg" "$st_nlink")"
+            meetslinks="$(satisfies_number_comparison "$linksarg" "$st_nlinks")"
             if [[ "$meetslinks" = "$FALSE" ]]; then
                 continue
             fi
         fi
 
-        usrname="$(id -un -- "$st_uid")"
         if [[ "$filteruser" -eq 1 ]]; then
             if [[ "$userarg" =~ $iscomparisonstr ]]; then
                 meetsuser="$(meets_user_criteria "$userarg" "$st_uid")"
             else
-                meetsuser="$(meets_user_criteria "$userarg" "$usrname")"
+                meetsuser="$(meets_user_criteria "$userarg" "$st_uname")"
             fi
 
             if [[ "$meetsuser" = "$FALSE" ]]; then
@@ -288,12 +282,11 @@ main () {
             fi
         fi
 
-        grpname="$(dscacheutil -q group -a gid "$st_gid" | grep "name: " | awk -F': ' '{print $2}')"
         if [[ "$filtergroup" -eq 1 ]]; then
             if [[ "$grouparg" =~ $iscomparisonstr ]]; then
                 meetsgroup="$(meets_group_criteria "$grouparg" "$st_gid")"
             else
-                meetsgroup="$(meets_group_criteria "$grouparg" "$grpname")"
+                meetsgroup="$(meets_group_criteria "$grouparg" "$st_gname")"
             fi
 
             if [[ "$meetsgroup" = "$FALSE" ]]; then
@@ -315,7 +308,7 @@ main () {
             fi
         fi
 
-        filename="${file//"$directory"\//}"
+        filename="${st_fname#"$directory/"}"
         if [[ "$filtername" -eq 1 ]]; then
             meetsname="$(meets_name_criteria "$namearg" "$filename")"
             if [[ "$meetsname" = "$FALSE" ]]; then
@@ -331,8 +324,10 @@ main () {
         else
             dtstr="$(format_long_fmt_dt "$st_mtime" 0)"
         fi
-        modestr="$(stat -f '%Sp' "$file")"
-        printf "%-11s %3s %-10s %-6s %6s %s %s\n" "$modestr" "$st_nlink" "$usrname" "$grpname" "$st_size" "$dtstr" "$filename"
+
+        # TODO implement dynamic uname and gname width (set to longest uname/gname among the files)
+        
+        printf "%-11s %3s %-10s %-10s %6s %s %s\n" "$st_smode" "$st_nlinks" "$st_uname" "$st_gname" "$st_size" "$dtstr" "$filename"
     done
 
     echo "total $total"
