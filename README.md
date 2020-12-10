@@ -7,21 +7,29 @@ This script acts as the `ls` command with `-al` options, but results can be filt
 
 ## Simple Installation
 To simply install this script and make it available on the command line, use the following one-liner (in any directory that you have write and execute privileges):
-* `$(git clone https://github.com/Grimmslaw/lsf.git; ./lsf/setup.sh [-s script] [-m manpage] install; rm -rf lsf/)`
+
+`$(git clone https://github.com/Grimmslaw/lsf.git; ./lsf/setup.sh [-s script] [-m manpage] install; rm -rf lsf/)`
 
 Where `[-s script]` and `[-m manpage]` allow you to optionally specify locations to add the script and/or the script's man page that are different from your OS's default locations (e.g. `/usr/local/bin/lsf` and `/usr/local/share/man/man1/lsf.1` for OSX).
 
 For a copy-paste, default installation:
-* `$(git clone https://github.com/Grimmslaw/lsf.git; ./lsf/setup.sh install; rm -rf lsf/)`
+
+`$(git clone https://github.com/Grimmslaw/lsf.git; ./lsf/setup.sh install; rm -rf lsf/)`
 
 ## Updateable Installation
 If you would like to be able to update the command-line command based on any changes you make to the script, use the following (wherever you would like the editable script to live):
-* `$(git clone https://github.com/Grimmslaw/lsf.git; ./lsf/setup.sh [-s script] [-m manpage] install)`
 
-Where, as above, `[-s script]` and `[-m manpage]` allow you to optionally specify alternate locations for the script and/or the script's man page. Then, if you make changes to the script, you can `cd` into the scripts parent directory, then run `./setup.sh [-x] [-s script] [-m manpage] update`, where `[-s script] [-m manpage]` are as above and `[-x]` is an optional flag that deletes the contents of the `./*/bak/` directories before updating the command-line command.
+`$(git clone https://github.com/Grimmslaw/lsf.git; ./lsf/setup.sh [-s script] [-m manpage] install)`
+
+Where, as above, `[-s script]` and `[-m manpage]` allow you to optionally specify alternate locations for the script and/or the script's man page. Then, if you make changes to the script, you can `cd` into the scripts parent directory, then run
+
+`./setup.sh [-x] [-s script] [-m manpage] update`
+
+Where `[-s script] [-m manpage]` are as above and `[-x]` is an optional flag that deletes the contents of the `./*/bak/` directories before updating the command-line command.
 
 Again, for a copy-paste, default (updateable) installation:
-* `$(git clone https://github.com/Grimmslaw/lsf.git; ./lsf/setup.sh install)`
+
+`$(git clone https://github.com/Grimmslaw/lsf.git; ./lsf/setup.sh install)`
 
 # Contributing
 If you would like to contribute:
