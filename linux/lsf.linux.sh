@@ -255,6 +255,7 @@ meets_name_criteria () {
 
 main () {
     directory=$1
+    # TODO: oh, looks like "total" is number of blocks
     total=0
 
     shopt -s dotglob

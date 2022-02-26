@@ -239,6 +239,7 @@ meets_name_criteria () {
 
 main () {
     directory=$1
+    # TODO: oh, looks like "total" is number of blocks
     total=0
 
     shopt -s dotglob
@@ -252,7 +253,7 @@ main () {
         fi
 
         filestats="$(stat -f "$stfmt" "$file")"
-        IFS=" " read st_omode st_smode st_nlinks st_uid st_uname st_gid st_gname st_size st_mtime st_fname <<< "$filestats"
+        IFS=" " read -r st_omode st_smode st_nlinks st_uid st_uname st_gid st_gname st_size st_mtime st_fname <<< "$filestats"
 
         # TODO: check about conditionally giving omode/smode
         if [[ "$filtermode" -eq 1 ]]; then
